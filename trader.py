@@ -50,6 +50,8 @@ class PokeTrader:
     def on_client_data(self, data):
         to_send = data or 0
 
+        print("GB DATA: "+str(data));
+
         if self._trade_state == TradeState.NOT_CONNECTED:
             if data == self.CONNECTED_MAGIC:
                 self._trade_state = TradeState.WAITING_FOR_LINK_TYPE
@@ -85,7 +87,7 @@ class PokeTrader:
         elif self._trade_state == TradeState.SENDING_TRAINER_DATA:
             if self._transfer_counter < len(self._serialized_trainer_data):
                 to_send = self._serialized_trainer_data[self._transfer_counter]
-                print(to_send)
+                #print(to_send)
                 self._transfer_counter += 1
             else:
                 self._trade_state = TradeState.WAITING_FOR_TRADE
@@ -146,4 +148,7 @@ else:
 
 trainer_data = Trainer('Joey')
 trainer_data.add_party_pokemon(Pokemon(0x26, 'WASABI'))
+trainer_data.add_party_pokemon(Pokemon(0x96, 'WASABU'))
+# trainer_data.add_party_pokemon(Pokemon(0x01, 'WASABO'))
+trainer_data.add_party_pokemon(Pokemon(0x09, 'WASABA'))
 PokeTrader(server, trainer_data, is_master).run()

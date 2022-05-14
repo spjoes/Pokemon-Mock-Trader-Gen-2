@@ -25,7 +25,6 @@ def text_to_pokestr(s):
 
 
 class Pokemon:
-    SERIALIZED_LEN = 44
 
     def __init__(self, id, name):
         self.id = id  # Correct?
@@ -65,16 +64,16 @@ class Pokemon:
         # See https://bulbapedia.bulbagarden.net/wiki/Pok%C3%A9mon_data_structure_in_Generation_II
         data = struct.pack(
             # ">BH9BH3B6H5B5H",
-            ">2H4BHb6H6BH3B7H",
+            ">2H4BHxxB6H6BH3B7H",
             # ">BBBBBBH3bHHHHHHBBBBBBHBBBHHHHHHH",
-            self.id,  # 0x96
+            self.id,
             self.held_item,
             self.move1,
             self.move2,
             self.move3,
             self.move4,
             self.trainer_id,
-            self.xp & (self.xp >> 8) & (self.xp >> 16),
+            self.xp,
             self.hp_ev,
             self.atk_ev,
             self.def_ev,
@@ -115,17 +114,27 @@ class Trainer:
 
     def serialize(self):
         serialized = bytes()
-
-        # See https://github.com/pret/pokered/blob/82f31b05c12c803d78f9b99b078198ed24cccdb1/wram.asm#L2197
-        serialized += bytes([PREAMBLE_VALUE] * 7)
         serialized += text_to_pokestr(self.name)
         serialized += bytes([len(self.party_pokemon)])
         serialized += bytes(
             [mon.id for mon in self.party_pokemon] + \
             [POKE_LIST_TERMINATOR] * (MAX_PARTY_POKEMON - len(self.party_pokemon) + 1)
         )
-        serialized += b''.join(mon.serialize() for mon in self.party_pokemon) + \
-                      (b'\0' * Pokemon.SERIALIZED_LEN) * (MAX_PARTY_POKEMON - len(self.party_pokemon))
+
+        print("POKEMON COUNT: "+str(len(self.party_pokemon)))
+
+        SERIALIZED_LEN = 49  # 45 = 4pkmn  null | 46 = 3pkmn  \0 | 47 = 2pkmn  \0\0 | 48 = 1pkmn  \0\0\0
+        bytesNeeded = b'\0\0\0\0'
+
+        for i in range(len(self.party_pokemon)):
+            SERIALIZED_LEN -= 1
+            bytesNeeded = bytesNeeded[:-1]
+
+        print("SERIALIZED_LEN: " + str(SERIALIZED_LEN))
+        print("bytesNeeded: " + str(bytesNeeded))
+
+        serialized += bytesNeeded.join(mon.serialize() for mon in self.party_pokemon) + \
+                      (b'\0' * SERIALIZED_LEN) * (MAX_PARTY_POKEMON - len(self.party_pokemon))
         serialized += b''.join(text_to_pokestr(self.name) for _ in self.party_pokemon) + \
                       (text_to_pokestr('') * (MAX_PARTY_POKEMON - len(self.party_pokemon)))
         serialized += b''.join(text_to_pokestr(mon.name) for mon in self.party_pokemon) + \
